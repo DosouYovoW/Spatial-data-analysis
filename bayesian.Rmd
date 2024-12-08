@@ -1,0 +1,69 @@
+---
+title: "bayesian"
+author: "wilfried Dossou-Yovo"
+date: "2024-07-28"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(gridExtra)
+```
+
+```{r}
+# Parameters for the prior Beta distribution
+alpha_prior <- 1
+beta_prior <- 1
+
+# Data: number of successes and trials
+successes <- 7
+trials <- 10
+failures <- trials - successes
+
+# Parameters for the posterior Beta distribution
+alpha_post <- alpha_prior + successes
+beta_post <- beta_prior + failures
+
+# Sequence of theta values
+theta <- seq(0, 1, length.out = 100)
+
+# Calculate the densities
+prior_density <- dbeta(theta, alpha_prior, beta_prior)
+likelihood_density <- dbinom(successes, trials, theta) / sum(dbinom(successes, trials, theta))
+posterior_density <- dbeta(theta, alpha_post, beta_post)
+```
+
+```{r}
+# Create plots
+prior_plot <- ggplot(data.frame(theta, prior_density), aes(x = theta, y = prior_density)) +
+  geom_line() +
+  ggtitle("Prior Distribution") +
+  ylab("Density") +
+  xlab(expression(theta))
+
+likelihood_plot <- ggplot(data.frame(theta, likelihood_density), aes(x = theta, y = likelihood_density)) +
+  geom_line() +
+  ggtitle("Likelihood") +
+  ylab("Density") +
+  xlab(expression(theta))
+
+posterior_plot <- ggplot(data.frame(theta, posterior_density), aes(x = theta, y = posterior_density)) +
+  geom_line() +
+  ggtitle("Posterior Distribution") +
+  ylab("Density") +
+  xlab(expression(theta))
+
+# Arrange the plots
+grid.arrange(prior_plot, likelihood_plot, posterior_plot, nrow = 3)
+```
+
+
+
+
+
+
+

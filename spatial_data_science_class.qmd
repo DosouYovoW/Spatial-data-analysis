@@ -1,0 +1,425 @@
+---
+title: "spatial_data_science_class"
+format: html
+editor: visual
+---
+
+# Load libraries
+
+```{r}
+library(tidyverse)
+library(sf)
+```
+
+```{r}
+nc <- system.file("gpkg/nc.gpkg", package="sf") |>
+    read_sf() 
+nc.32119 <- st_transform(nc, 'EPSG:32119')
+nc.32119 |>
+    select(BIR74) |>
+    plot(graticule = TRUE, axes = TRUE)
+```
+
+```{r}
+help(package = "sf")
+list.files(system.file(package = "sf"))
+list.files(system.file("gpkg", package = "sf"))
+
+# Load the built-in GeoPackage file
+nc <- read_sf(system.file("gpkg/nc.gpkg", package = "sf"))
+
+# View the first few rows
+head(nc)
+
+# View the structure of the dataset
+str(nc)
+
+# Summary of the dataset
+summary(nc)
+
+system.file(package = "sf")
+nc <- read_sf(system.file("gpkg/nc.gpkg", package = "sf"))
+plot(nc)
+```
+
+```{r}
+library(terra)
+library(mapview)
+nc %>% 
+    select(BIR74) %>% 
+  mapview()
+  
+```
+
+```{r}
+shape_data <- st_read("PA_411 Final exam/LC25_boundary_10TM.shp")
+
+# Read CSV
+soil_sample_data <- st_read("PA_411 Final exam/Soil sample.shp")
+
+# # Merge on a common column (e.g., "Region_ID")
+# merged_data <- shape_data %>%
+#   left_join(csv_data, by = "Region_ID")
+# 
+# # Save the merged data as a new shapefile
+# st_write(merged_data, "data/merged_regions.shp")
+```
+```{r}
+shape_data
+atr <- as.data.frame(shape_data)
+```
+
+```{r}
+as.data.frame(soil_sample_data)
+```
+
+
+```{r}
+shape_data %>% 
+  select(geometry) %>% 
+plot()
+```
+
+```{r}
+shape_data %>% 
+  select(geometry) %>% 
+ mapview(col.regions = "blue",  legend= FALSE)+
+  soil_sample_data %>% 
+            select(geometry) %>% 
+  mapview(col.regions = "red", legend= FALSE)
+```
+
+```{r}
+# Ensure CRS matches
+#point_data <- st_transform(point_data, st_crs(polygon_data))
+
+shape_data <- st_transform(shape_data, crs = 3857)
+soil_sample_data <- st_transform(soil_sample_data, crs = 3857)
+# Plot using ggplot2
+ggplot() +
+  geom_sf(data = shape_data, fill = "lightgreen", color = "darkgreen") + # Polygon layer
+  geom_sf(data = soil_sample_data, color = "blue", size = 3) +                  # Point layer
+  #coord_sf(crs = st_crs(3857)) +
+  theme_minimal() +
+  labs(title = "Overlay of Points on Polygons")
+
+```
+
+
+```{r}
+library(geoR)
+```
+```{r}
+d <- st_as_sf(data.frame(x = parana$coords[, 1],
+                         y = parana$coords[, 2],
+                         value = parana$data),
+              coords = c("x", "y"))
+
+ggplot(d) + geom_sf(aes(color = value), size = 2) +
+scale_color_gradient(low = "blue", high = "orange") +
+geom_path(data = data.frame(parana$border), aes(east, north)) +
+theme_bw()
+```
+
+```{r}
+library(gstat)
+library(spData)
+library(terra)
+```
+
+```{r}
+res <- gstat(formula = value ~ 1, locations = d,
+             nmax = nrow(d), # use all the neighbors locations
+             set = list(idp = 1)) # beta = 1 
+
+resp <- predict(res, d)
+resp$x <- st_coordinates(resp)[,1]
+resp$y <- st_coordinates(resp)[,2]
+resp$pred <- resp$var1.pred
+
+pred <- terra::rasterize(resp, grid, field = "pred", fun = "mean")
+tm_shape(pred) + tm_raster(alpha = 0.6, palette = "viridis")
+```
+
+```{r}
+# library(sf)
+# library(gstat)
+# library(terra)
+ library(tmap)
+
+# Set up the gstat model
+res <- gstat(formula = value ~ 1, locations = d, 
+             nmax = nrow(d), 
+             set = list(idp = 1)) # IDW with beta = 1
+
+# Make predictions
+resp <- predict(res, d)
+
+# Extract coordinates and add them to the data
+resp$x <- st_coordinates(resp)[,1]
+resp$y <- st_coordinates(resp)[,2]
+
+# Ensure the 'pred' column exists
+resp$pred <- resp$var1.pred  # Predicted values from IDW
+
+# Rasterize using terra
+#grid <- terra::rast(extent = st_bbox(d), resolution = c(0.01, 0.01)) 
+grid <- terra::rast(extent = st_bbox(d), resolution = c(0.1, 0.1))  # Larger cells
+# Adjust resolution
+pred <- terra::rasterize(resp, grid, field = "pred", fun = mean)
+
+# Plot the raster using tmap
+tm_shape(pred) +
+  tm_raster(alpha = 0.6, palette = "viridis")
+```
+
+
+
+# Kriging
+```{r}
+library(sp)
+library(gstat)
+library(sf)
+library(mapview)
+
+data(meuse)
+data(meuse.grid)
+
+meuse <- st_as_sf(meuse, coords = c("x", "y"), crs = 28992)
+mapview(meuse, zcol = "zinc",  map.types = "CartoDB.Voyager")
+
+meuse.grid <- st_as_sf(meuse.grid, coords = c("x", "y"),
+                       crs = 28992)
+mapview(meuse.grid,  map.types = "CartoDB.Voyager")
+```
+
+```{r}
+vc <- variogram(log(zinc) ~ 1, meuse, cloud = TRUE)
+plot(vc)
+```
+```{r}
+v <- variogram(log(zinc) ~ 1, data = meuse)
+plot(v)
+```
+
+
+```{r}
+?vgm()
+```
+
+```{r}
+show.vgms(par.strip.text = list(cex = 0.75))
+```
+```{r}
+vinitial <- vgm(psill = 0.5, model = "Sph",
+                range = 900, nugget = 0.1)
+plot(v, vinitial, cutoff = 1000, cex = 1.5)
+```
+```{r}
+fv <- fit.variogram(object = v,
+                    model = vgm(psill = 0.5, model = "Sph",
+                                range = 900, nugget = 0.1))
+fv
+plot(v, fv, cex = 1.5)
+```
+
+# Anisotropy testing
+```{r}
+# Compute directional variograms
+v_dir <- variogram(log(zinc) ~ 1, meuse, alpha = c(0, 45, 90, 135))
+
+# Plot the directional variograms
+plot(v_dir)
+```
+# Define anisotropic variogram model
+```{r}
+# Define anisotropic variogram model
+anisotropic_model <- vgm(psill = 0.8, model = "Sph", range = 1000, nugget = 0.1,
+                         anis = c(45, 0.6))  # 45° major axis, anisotropy ratio 0.6
+
+# Fit the anisotropic variogram model
+anisotropic_fitted <- fit.variogram(v, model = anisotropic_model)
+
+# Plot the fitted anisotropic variogram
+plot(v, anisotropic_fitted, cutoff = 1500, cex = 1.5)
+
+```
+# kriging
+```{r}
+library(viridis)
+k <- gstat(formula = log(zinc) ~ 1, data = meuse, model = fv)
+kpred <- predict(k, meuse.grid)
+```
+
+```{r}
+ggplot() + geom_sf(data = kpred, aes(color = var1.pred)) +
+  geom_sf(data = meuse) +
+  scale_color_viridis(name = "log(zinc)") + theme_bw()
+
+ggplot() + geom_sf(data = kpred, aes(color = var1.var)) +
+  geom_sf(data = meuse) +
+  scale_color_viridis(name = "variance") + theme_bw()
+```
+
+```{r}
+#library(gstat)
+
+# Perform cross-validation
+cv <- krige.cv(log(zinc) ~ 1, locations = meuse, model = anisotropic_fitted)
+
+# Extract observed and predicted values
+observed <- cv$observed
+predicted <- cv$var1.pred
+
+```
+
+```{r}
+# Calculate R-squared
+r2 <- 1 - (sum((observed - predicted)^2) / sum((observed - mean(observed))^2))
+
+# Display R-squared
+cat("R-squared:", r2, "\n")
+```
+```{r}
+# Calculate RMSE
+rmse <- sqrt(mean((observed - predicted)^2))
+cat("RMSE:", rmse, "\n")
+```
+
+```{r}
+# Calculate MAE
+mae <- mean(abs(observed - predicted))
+cat("MAE:", mae, "\n")
+```
+# Gaussian model
+```{r}
+show.vgms(par.strip.text = list(cex = 0.75))
+```
+```{r}
+vinitial <- vgm(psill = 0.5, model = "Exp",
+                range = 300, nugget = 0.1)
+plot(v, vinitial, cutoff = 1000, cex = 1.5)
+```
+```{r}
+fv <- fit.variogram(object = v,
+                    model = vgm(psill = 0.5, model = "Exp",
+                                range = 300, nugget = 0.1))
+fv
+plot(v, fv, cex = 1.5)
+```
+
+# Anisotropy testing
+```{r}
+# Compute directional variograms
+v_dir <- variogram(log(zinc) ~ 1, meuse, alpha = c(0, 45, 90, 135))
+
+# Plot the directional variograms
+plot(v_dir)
+```
+# Define anisotropic variogram model
+```{r}
+# Define anisotropic variogram model
+anisotropic_model <- vgm(psill = 0.8, model = "Exp", range = 600, nugget = 0.1,
+                         anis = c(45, 0.6))  # 45° major axis, anisotropy ratio 0.6
+
+# Fit the anisotropic variogram model
+anisotropic_fitted <- fit.variogram(v, model = anisotropic_model)
+
+# Plot the fitted anisotropic variogram
+plot(v, anisotropic_fitted, cutoff = 1500, cex = 1.5)
+
+```
+# kriging
+```{r}
+library(viridis)
+k <- gstat(formula = log(zinc) ~ 1, data = meuse, model = anisotropic_fitted)
+kpred <- predict(k, meuse.grid)
+```
+```{r}
+# Extract coordinates
+kpred_coords <- cbind(kpred, st_coordinates(kpred))
+
+# Check the structure of the new data
+head(kpred_coords)
+
+# Convert to raster
+raster_pred <- rast(kpred_coords, varname = "var1.pred")
+
+# Convert raster to a data frame for ggplot
+df_pred <- as.data.frame(raster_pred, xy = TRUE, na.rm = TRUE)
+
+```
+
+```{r}
+custom_levels <- c(4, 6, 7, 7.5)
+custom_labels <- c("2 lbs/ac", "4 lbs/ac", "6 lbs/ac")
+ggplot() + geom_sf(data = kpred, aes(color = var1.pred),
+                   show.legend = FALSE) +
+  geom_sf(data = meuse) +
+  geom_contour_filled(data = kpred, aes(x = kpred_coords$X, y = kpred_coords$Y, z = var1.pred), #color = "gray100",
+              # bins = 4
+              breaks = custom_levels
+               ) +
+  scale_fill_viridis_d(labels = custom_labels) +  
+  scale_fill_manual(values = c("green4", "red4", "yellow"))+
+  labs(x = "Longitude", y = "Latitude", fill = "Zinc Prescription (lbs/ac)")+
+  theme_bw()
+```
+# Convert your prescription data into a Shapefile
+```{r}
+kpred <- kpred %>% 
+  mutate(zinc_level  = case_when(var1.pred < 6 ~ "2 lbs/ac",
+                               var1.pred < 7 & var1.pred > 6 ~ "4 lbs/ac",
+                               .default = "6 lbs/ac"))
+```
+
+```{r}
+# Save as a Shapefile
+st_write(kpred, "zinc_prescription_map.shp", append = FALSE)
+```
+```{r}
+# Save as a CSV file
+write.csv(st_drop_geometry(kpred), "zinc_prescription_map.csv", row.names = FALSE)
+```
+
+
+
+
+```{r}
+#library(gstat)
+
+# Perform cross-validation
+cv <- krige.cv(log(zinc) ~ 1, locations = meuse, model = anisotropic_fitted)
+
+# Extract observed and predicted values
+observed <- cv$observed
+predicted <- cv$var1.pred
+
+```
+
+```{r}
+# Calculate R-squared
+r2 <- 1 - (sum((observed - predicted)^2) / sum((observed - mean(observed))^2))
+
+# Display R-squared
+cat("R-squared:", r2, "\n")
+```
+```{r}
+# Calculate RMSE
+rmse <- sqrt(mean((observed - predicted)^2))
+cat("RMSE:", rmse, "\n")
+```
+
+```{r}
+# Calculate MAE
+mae <- mean(abs(observed - predicted))
+cat("MAE:", mae, "\n")
+```
+
+
+
+
+
+
+
+

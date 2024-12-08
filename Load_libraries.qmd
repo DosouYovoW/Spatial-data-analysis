@@ -1,0 +1,18 @@
+---
+title: "spatial_data_science_class"
+format: html
+editor: visual
+---
+# Load libraries
+```{r}
+library(tidyverse)
+library(sf)
+library(terra)
+library(mapview)
+library(geoR)
+library(gstat)
+library(spData)
+library(tmap)
+library(sp)
+library(viridis)
+```

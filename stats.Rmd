@@ -1,0 +1,64 @@
+---
+title: "stats"
+author: "wilfried Dossou-Yovo"
+date: "2024-07-25"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(sf)
+library(mapview)
+```
+
+```{r}
+d <- st_read(system.file("shape/nc.shp", package = "sf"),
+             quiet = TRUE)
+mapview(d, zcol = "NWBIR74")
+```
+
+```{r}
+d %>% 
+  ggplot()+
+  geom_sf(aes(fill = NWBIR74))
+```
+
+
+
+```{r}
+# List available example files in the 'shape' directory of the 'sf' package
+example_files <- list.files(system.file("shape", package = "sf"))
+print(example_files)
+
+# Read a specific shapefile (e.g., 'nc.shp')
+d <- st_read(system.file("shape/nc.shp", package = "sf"), quiet = TRUE)
+
+# Explore the structure and content of the data
+summary(d)
+str(d)
+head(d)
+```
+
+```{r}
+library(terra)
+d <- rast(system.file("ex/elev.tif", package = "terra"))
+plot(d)
+```
+
+
+```{r}
+library(sp)
+data(meuse)
+meuse <- st_as_sf(meuse, coords = c("x", "y"), crs = 28992)
+mapview(meuse, zcol = "zinc",  map.types = "CartoDB.Voyager")
+```
+
+```{r}
+?sf::st_crs()
+```
+
+
