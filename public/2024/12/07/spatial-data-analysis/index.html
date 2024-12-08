@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=4435&amp;path=livereload" data-no-instant defer></script>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="generator" content="Hugo 0.139.3">
+
+
+<title>Spatial data Analysis - A Hugo website</title>
+<meta property="og:title" content="Spatial data Analysis - A Hugo website">
+
+
+  <link href='//localhost:4435/favicon.ico' rel='icon' type='image/x-icon'/>
+
+
+
+  
+
+
+
+
+
+
+
+
+<link href='//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css' rel='stylesheet' type='text/css' />
+
+
+
+<link rel="stylesheet" href="/css/fonts.css" media="all">
+<link rel="stylesheet" href="/css/main.css" media="all">
+
+
+
+  </head>
+  <body>
+    <div class="wrapper">
+      <header class="header">
+        <nav class="nav">
+  <a href="/" class="nav-logo">
+    <img src="/images/logo.png"
+         width="50"
+         height="50"
+         alt="Logo">
+  </a>
+
+  <ul class="nav-links">
+    
+    <li><a href="/about/">About</a></li>
+    
+    <li><a href="https://github.com/rstudio/blogdown">GitHub</a></li>
+    
+    <li><a href="https://twitter.com/rstudio">Twitter</a></li>
+    
+  </ul>
+</nav>
+
+      </header>
+
+
+<main class="content" role="main">
+
+  <article class="article">
+    
+    <span class="article-duration">2 min read</span>
+    
+
+    <h1 class="article-title">Spatial data Analysis</h1>
+
+    
+    <span class="article-date">2024-12-07</span>
+    
+
+    <div class="article-content">
+      
+      <h1 id="load-libraries">Load libraries</h1>
+<pre><code class="language-{r}">#install.packages(&quot;blogdown&quot;)
+#blogdown::new_site()
+library(blogdown)
+library(tidyverse)
+library(sf)
+library(terra)
+library(mapview)
+library(geoR)
+library(gstat)
+library(spData)
+library(tmap)
+library(sp)
+library(viridis)
+</code></pre>
+<pre><code class="language-{r}">data(meuse)
+data(meuse.grid)
+meuse &lt;- st_as_sf(meuse, coords = c(&quot;x&quot;, &quot;y&quot;), crs = 28992)
+meuse.grid &lt;- st_as_sf(meuse.grid, coords = c(&quot;x&quot;, &quot;y&quot;),
+                       crs = 28992)
+</code></pre>
+<h1 id="kriging">Kriging</h1>
+<h2 id="anisotropy-testing">Anisotropy testing</h2>
+<pre><code class="language-{r}"># Compute directional variograms
+v_dir &lt;- variogram(log(zinc) ~ 1, meuse, alpha = c(0, 45, 90, 135))
+
+# Plot the directional variograms
+plot(v_dir)
+</code></pre>
+<h2 id="define-anisotropic-variogram-model">Define anisotropic variogram model</h2>
+<pre><code class="language-{r}"># Define anisotropic variogram model
+anisotropic_model &lt;- vgm(psill = 0.8, model = &quot;Sph&quot;, range = 1000, nugget = 0.1,
+                         anis = c(45, 0.6))  # 45° major axis, anisotropy ratio 0.6
+v &lt;- variogram(log(zinc) ~ 1, data = meuse)
+plot(v)
+# Fit the anisotropic variogram model
+anisotropic_fitted &lt;- fit.variogram(v, model = anisotropic_model)
+
+# Plot the fitted anisotropic variogram
+plot(v, anisotropic_fitted, cutoff = 1500, cex = 1.5)
+</code></pre>
+<h2 id="kriging-1">kriging</h2>
+<pre><code class="language-{r}">k &lt;- gstat(formula = log(zinc) ~ 1, data = meuse, model = anisotropic_model)
+kpred &lt;- predict(k, meuse.grid)
+</code></pre>
+<pre><code class="language-{r}"># Perform cross-validation
+cv &lt;- krige.cv(log(zinc) ~ 1, locations = meuse, model = anisotropic_fitted)
+
+# Extract observed and predicted values
+observed &lt;- cv$observed
+predicted &lt;- cv$var1.pred
+
+</code></pre>
+<pre><code class="language-{r}"># Calculate R-squared
+r2 &lt;- 1 - (sum((observed - predicted)^2) / sum((observed - mean(observed))^2))
+
+# Display R-squared
+cat(&quot;R-squared:&quot;, r2, &quot;\n&quot;)
+</code></pre>
+<pre><code class="language-{r}"># Calculate RMSE
+rmse &lt;- sqrt(mean((observed - predicted)^2))
+cat(&quot;RMSE:&quot;, rmse, &quot;\n&quot;)
+</code></pre>
+<pre><code class="language-{r}"># Calculate MAE
+mae &lt;- mean(abs(observed - predicted))
+cat(&quot;MAE:&quot;, mae, &quot;\n&quot;)
+</code></pre>
+<pre><code class="language-{r}"># Extract coordinates
+kpred_coords &lt;- cbind(kpred, st_coordinates(kpred))
+
+# Check the structure of the new data
+head(kpred_coords)
+</code></pre>
+<pre><code class="language-{r}">custom_levels &lt;- c(4, 6, 7, 7.5)
+custom_labels &lt;- c(&quot;2 lbs/ac&quot;, &quot;4 lbs/ac&quot;, &quot;6 lbs/ac&quot;)
+ggplot() + geom_sf(data = kpred, aes(color = var1.pred),
+                   show.legend = FALSE) +
+  geom_sf(data = meuse) +
+  geom_contour_filled(data = kpred, aes(x = kpred_coords$X, y = kpred_coords$Y, z = var1.pred), #color = &quot;gray100&quot;,
+              # bins = 4
+              breaks = custom_levels
+               ) +
+  scale_fill_viridis_d(labels = custom_labels) +  
+  scale_fill_manual(values = c(&quot;green4&quot;, &quot;red4&quot;, &quot;yellow&quot;))+
+  labs(x = &quot;Longitude&quot;, y = &quot;Latitude&quot;, fill = &quot;Zinc Prescription (lbs/ac)&quot;)+
+  theme_bw()
+</code></pre>
+
+    </div>
+  </article>
+
+  
+
+
+</main>
+
+      <footer class="footer">
+        <ul class="footer-links">
+          
+          <li>
+            <a href="https://gohugo.io/" class="footer-links-kudos">Made with <img src="/images/hugo-logo.png" alt="Img link to Hugo website" width="22" height="22"></a>
+          </li>
+        </ul>
+      </footer>
+
+    </div>
+    
+
+
+
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+
+
+
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/languages/r.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/languages/yaml.min.js"></script>
+<script>hljs.configure({languages: []}); hljs.initHighlightingOnLoad();</script>
+
+
+
+    
+<script src="/js/math-code.js"></script>
+<script async src="//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
+
+    
+  </body>
+</html>
+

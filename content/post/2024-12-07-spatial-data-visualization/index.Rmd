@@ -1,14 +1,16 @@
 ---
-title: "spatial_data_science_class"
-format: html
-editor: visual
+title: spatial data visualization
+author: Wilfried Dossou-Yovo
+date: '2024-12-07'
+slug: spatial-data-visualization
+categories: []
+tags: []
 ---
 
 # Load libraries
-
 ```{r}
 #install.packages("blogdown")
-blogdown::new_site()
+#blogdown::new_site()
 library(blogdown)
 library(tidyverse)
 library(sf)
@@ -31,9 +33,7 @@ meuse.grid <- st_as_sf(meuse.grid, coords = c("x", "y"),
 ```
 
 # Kriging
-
 ## Anisotropy testing
-
 ```{r}
 # Compute directional variograms
 v_dir <- variogram(log(zinc) ~ 1, meuse, alpha = c(0, 45, 90, 135))
@@ -43,7 +43,6 @@ plot(v_dir)
 ```
 
 ## Define anisotropic variogram model
-
 ```{r}
 # Define anisotropic variogram model
 anisotropic_model <- vgm(psill = 0.8, model = "Sph", range = 1000, nugget = 0.1,
@@ -55,11 +54,9 @@ anisotropic_fitted <- fit.variogram(v, model = anisotropic_model)
 
 # Plot the fitted anisotropic variogram
 plot(v, anisotropic_fitted, cutoff = 1500, cex = 1.5)
-
 ```
 
 ## kriging
-
 ```{r}
 k <- gstat(formula = log(zinc) ~ 1, data = meuse, model = anisotropic_model)
 kpred <- predict(k, meuse.grid)
@@ -118,3 +115,6 @@ ggplot() + geom_sf(data = kpred, aes(color = var1.pred),
   labs(x = "Longitude", y = "Latitude", fill = "Zinc Prescription (lbs/ac)")+
   theme_bw()
 ```
+
+
+

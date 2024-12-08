@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=4435&amp;path=livereload" data-no-instant defer></script>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="generator" content="Hugo 0.139.3">
+
+
+<title>spatial data visualization - A Hugo website</title>
+<meta property="og:title" content="spatial data visualization - A Hugo website">
+
+
+  <link href='//localhost:4435/favicon.ico' rel='icon' type='image/x-icon'/>
+
+
+
+  
+
+
+
+
+
+
+
+
+<link href='//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css' rel='stylesheet' type='text/css' />
+
+
+
+<link rel="stylesheet" href="/css/fonts.css" media="all">
+<link rel="stylesheet" href="/css/main.css" media="all">
+
+
+
+  </head>
+  <body>
+    <div class="wrapper">
+      <header class="header">
+        <nav class="nav">
+  <a href="/" class="nav-logo">
+    <img src="/images/logo.png"
+         width="50"
+         height="50"
+         alt="Logo">
+  </a>
+
+  <ul class="nav-links">
+    
+    <li><a href="/about/">About</a></li>
+    
+    <li><a href="https://github.com/rstudio/blogdown">GitHub</a></li>
+    
+    <li><a href="https://twitter.com/rstudio">Twitter</a></li>
+    
+  </ul>
+</nav>
+
+      </header>
+
+
+<main class="content" role="main">
+
+  <article class="article">
+    
+    <span class="article-duration">3 min read</span>
+    
+
+    <h1 class="article-title">spatial data visualization</h1>
+
+    
+    <span class="article-date">2024-12-07</span>
+    
+
+    <div class="article-content">
+      
+      <h1 id="load-libraries">Load libraries</h1>
+<pre><code class="language-r">#install.packages(&quot;blogdown&quot;)
+#blogdown::new_site()
+library(blogdown)
+library(tidyverse)
+</code></pre>
+<pre><code>## ── Attaching core tidyverse packages ──────────────────────── tidyverse 2.0.0 ──
+## ✔ dplyr     1.1.4     ✔ readr     2.1.5
+## ✔ forcats   1.0.0     ✔ stringr   1.5.1
+## ✔ ggplot2   3.5.1     ✔ tibble    3.2.1
+## ✔ lubridate 1.9.3     ✔ tidyr     1.3.1
+## ✔ purrr     1.0.2     
+## ── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──
+## ✖ dplyr::filter() masks stats::filter()
+## ✖ dplyr::lag()    masks stats::lag()
+## ℹ Use the conflicted package (&lt;http://conflicted.r-lib.org/&gt;) to force all conflicts to become errors
+</code></pre>
+<pre><code class="language-r">library(sf)
+</code></pre>
+<pre><code>## Linking to GEOS 3.10.2, GDAL 3.4.2, PROJ 8.2.1; sf_use_s2() is TRUE
+</code></pre>
+<pre><code class="language-r">library(terra)
+</code></pre>
+<pre><code>## terra 1.7.65
+## 
+## Attaching package: 'terra'
+## 
+## The following object is masked from 'package:tidyr':
+## 
+##     extract
+</code></pre>
+<pre><code class="language-r">library(mapview)
+library(geoR)
+</code></pre>
+<pre><code>## --------------------------------------------------------------
+##  Analysis of Geostatistical Data
+##  For an Introduction to geoR go to http://www.leg.ufpr.br/geoR
+##  geoR version 1.9-3 (built on 2023-12-11) is now loaded
+## --------------------------------------------------------------
+</code></pre>
+<pre><code class="language-r">library(gstat)
+library(spData)
+</code></pre>
+<pre><code>## To access larger datasets in this package, install the spDataLarge
+## package with: `install.packages('spDataLarge',
+## repos='https://nowosad.github.io/drat/', type='source')`
+</code></pre>
+<pre><code class="language-r">library(tmap)
+</code></pre>
+<pre><code>## Breaking News: tmap 3.x is retiring. Please test v4, e.g. with
+## remotes::install_github('r-tmap/tmap')
+</code></pre>
+<pre><code class="language-r">library(sp)
+library(viridis)
+</code></pre>
+<pre><code>## Loading required package: viridisLite
+</code></pre>
+<pre><code class="language-r">data(meuse)
+data(meuse.grid)
+meuse &lt;- st_as_sf(meuse, coords = c(&quot;x&quot;, &quot;y&quot;), crs = 28992)
+meuse.grid &lt;- st_as_sf(meuse.grid, coords = c(&quot;x&quot;, &quot;y&quot;),
+                       crs = 28992)
+</code></pre>
+<h1 id="kriging">Kriging</h1>
+<h2 id="anisotropy-testing">Anisotropy testing</h2>
+<pre><code class="language-r"># Compute directional variograms
+v_dir &lt;- variogram(log(zinc) ~ 1, meuse, alpha = c(0, 45, 90, 135))
+
+# Plot the directional variograms
+plot(v_dir)
+</code></pre>
+<img src="/2024/12/07/spatial-data-visualization/index_files/figure-html/unnamed-chunk-3-1.png" width="672" />
+<h2 id="define-anisotropic-variogram-model">Define anisotropic variogram model</h2>
+<pre><code class="language-r"># Define anisotropic variogram model
+anisotropic_model &lt;- vgm(psill = 0.8, model = &quot;Sph&quot;, range = 1000, nugget = 0.1,
+                         anis = c(45, 0.6))  # 45° major axis, anisotropy ratio 0.6
+v &lt;- variogram(log(zinc) ~ 1, data = meuse)
+plot(v)
+</code></pre>
+<img src="/2024/12/07/spatial-data-visualization/index_files/figure-html/unnamed-chunk-4-1.png" width="672" />
+<pre><code class="language-r"># Fit the anisotropic variogram model
+anisotropic_fitted &lt;- fit.variogram(v, model = anisotropic_model)
+
+# Plot the fitted anisotropic variogram
+plot(v, anisotropic_fitted, cutoff = 1500, cex = 1.5)
+</code></pre>
+<img src="/2024/12/07/spatial-data-visualization/index_files/figure-html/unnamed-chunk-4-2.png" width="672" />
+<h2 id="kriging-1">kriging</h2>
+<pre><code class="language-r">k &lt;- gstat(formula = log(zinc) ~ 1, data = meuse, model = anisotropic_model)
+kpred &lt;- predict(k, meuse.grid)
+</code></pre>
+<pre><code>## [using ordinary kriging]
+</code></pre>
+<pre><code class="language-r"># Perform cross-validation
+cv &lt;- krige.cv(log(zinc) ~ 1, locations = meuse, model = anisotropic_fitted)
+
+# Extract observed and predicted values
+observed &lt;- cv$observed
+predicted &lt;- cv$var1.pred
+</code></pre>
+<pre><code class="language-r"># Calculate R-squared
+r2 &lt;- 1 - (sum((observed - predicted)^2) / sum((observed - mean(observed))^2))
+
+# Display R-squared
+cat(&quot;R-squared:&quot;, r2, &quot;\n&quot;)
+</code></pre>
+<pre><code>## R-squared: 0.7154926
+</code></pre>
+<pre><code class="language-r"># Calculate RMSE
+rmse &lt;- sqrt(mean((observed - predicted)^2))
+cat(&quot;RMSE:&quot;, rmse, &quot;\n&quot;)
+</code></pre>
+<pre><code>## RMSE: 0.3838017
+</code></pre>
+<pre><code class="language-r"># Calculate MAE
+mae &lt;- mean(abs(observed - predicted))
+cat(&quot;MAE:&quot;, mae, &quot;\n&quot;)
+</code></pre>
+<pre><code>## MAE: 0.2933503
+</code></pre>
+<pre><code class="language-r"># Extract coordinates
+kpred_coords &lt;- cbind(kpred, st_coordinates(kpred))
+
+# Check the structure of the new data
+head(kpred_coords)
+</code></pre>
+<pre><code>## Simple feature collection with 6 features and 4 fields
+## Geometry type: POINT
+## Dimension:     XY
+## Bounding box:  xmin: 181100 ymin: 333660 xmax: 181220 ymax: 333740
+## Projected CRS: Amersfoort / RD New
+##   var1.pred  var1.var      X      Y              geometry
+## 1  6.575652 0.4658882 181180 333740 POINT (181180 333740)
+## 2  6.680143 0.3807574 181140 333700 POINT (181140 333700)
+## 3  6.586995 0.4030249 181180 333700 POINT (181180 333700)
+## 4  6.477784 0.4315752 181220 333700 POINT (181220 333700)
+## 5  6.790864 0.2880628 181100 333660 POINT (181100 333660)
+## 6  6.693545 0.3149947 181140 333660 POINT (181140 333660)
+</code></pre>
+<pre><code class="language-r">custom_levels &lt;- c(4, 6, 7, 7.5)
+custom_labels &lt;- c(&quot;2 lbs/ac&quot;, &quot;4 lbs/ac&quot;, &quot;6 lbs/ac&quot;)
+ggplot() + geom_sf(data = kpred, aes(color = var1.pred),
+                   show.legend = FALSE) +
+  geom_sf(data = meuse) +
+  geom_contour_filled(data = kpred, aes(x = kpred_coords$X, y = kpred_coords$Y, z = var1.pred), #color = &quot;gray100&quot;,
+              # bins = 4
+              breaks = custom_levels
+               ) +
+  scale_fill_viridis_d(labels = custom_labels) +  
+  scale_fill_manual(values = c(&quot;green4&quot;, &quot;red4&quot;, &quot;yellow&quot;))+
+  labs(x = &quot;Longitude&quot;, y = &quot;Latitude&quot;, fill = &quot;Zinc Prescription (lbs/ac)&quot;)+
+  theme_bw()
+</code></pre>
+<pre><code>## Scale for fill is already present.
+## Adding another scale for fill, which will replace the existing scale.
+</code></pre>
+<img src="/2024/12/07/spatial-data-visualization/index_files/figure-html/unnamed-chunk-11-1.png" width="672" />
+
+    </div>
+  </article>
+
+  
+
+
+</main>
+
+      <footer class="footer">
+        <ul class="footer-links">
+          
+          <li>
+            <a href="https://gohugo.io/" class="footer-links-kudos">Made with <img src="/images/hugo-logo.png" alt="Img link to Hugo website" width="22" height="22"></a>
+          </li>
+        </ul>
+      </footer>
+
+    </div>
+    
+
+
+
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+
+
+
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/languages/r.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/languages/yaml.min.js"></script>
+<script>hljs.configure({languages: []}); hljs.initHighlightingOnLoad();</script>
+
+
+
+    
+<script src="/js/math-code.js"></script>
+<script async src="//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
+
+    
+  </body>
+</html>
+
