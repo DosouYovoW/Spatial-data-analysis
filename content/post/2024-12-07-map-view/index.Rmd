@@ -3,8 +3,9 @@ title: Map view
 author: Wilfried Dossou-Yovo
 date: '2024-12-07'
 slug: map-view
-categories: []
+categories: ["Spatial Analysis"]
 tags: []
+#image: "image/logo.jpeg"
 ---
 
 ```{r setup, include=FALSE}
@@ -52,4 +53,3 @@ data(meuse)
 meuse <- st_as_sf(meuse, coords = c("x", "y"), crs = 28992)
 mapview(meuse, zcol = "zinc",  map.types = "CartoDB.Voyager")
 ```
-

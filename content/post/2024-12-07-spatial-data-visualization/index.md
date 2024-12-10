@@ -3,94 +3,27 @@ title: spatial data visualization
 author: Wilfried Dossou-Yovo
 date: '2024-12-07'
 slug: spatial-data-visualization
-categories: []
+categories: ["Spatial Analysis"]
 tags: []
 ---
 
 # Load libraries
+
 
 ``` r
 #install.packages("blogdown")
 #blogdown::new_site()
 library(blogdown)
 library(tidyverse)
-```
-
-```
-## ── Attaching core tidyverse packages ──────────────────────── tidyverse 2.0.0 ──
-## ✔ dplyr     1.1.4     ✔ readr     2.1.5
-## ✔ forcats   1.0.0     ✔ stringr   1.5.1
-## ✔ ggplot2   3.5.1     ✔ tibble    3.2.1
-## ✔ lubridate 1.9.3     ✔ tidyr     1.3.1
-## ✔ purrr     1.0.2     
-## ── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──
-## ✖ dplyr::filter() masks stats::filter()
-## ✖ dplyr::lag()    masks stats::lag()
-## ℹ Use the conflicted package (<http://conflicted.r-lib.org/>) to force all conflicts to become errors
-```
-
-``` r
 library(sf)
-```
-
-```
-## Linking to GEOS 3.10.2, GDAL 3.4.2, PROJ 8.2.1; sf_use_s2() is TRUE
-```
-
-``` r
 library(terra)
-```
-
-```
-## terra 1.7.65
-## 
-## Attaching package: 'terra'
-## 
-## The following object is masked from 'package:tidyr':
-## 
-##     extract
-```
-
-``` r
 library(mapview)
 library(geoR)
-```
-
-```
-## --------------------------------------------------------------
-##  Analysis of Geostatistical Data
-##  For an Introduction to geoR go to http://www.leg.ufpr.br/geoR
-##  geoR version 1.9-3 (built on 2023-12-11) is now loaded
-## --------------------------------------------------------------
-```
-
-``` r
 library(gstat)
 library(spData)
-```
-
-```
-## To access larger datasets in this package, install the spDataLarge
-## package with: `install.packages('spDataLarge',
-## repos='https://nowosad.github.io/drat/', type='source')`
-```
-
-``` r
 library(tmap)
-```
-
-```
-## Breaking News: tmap 3.x is retiring. Please test v4, e.g. with
-## remotes::install_github('r-tmap/tmap')
-```
-
-``` r
 library(sp)
 library(viridis)
-```
-
-```
-## Loading required package: viridisLite
 ```
 
 
@@ -103,7 +36,9 @@ meuse.grid <- st_as_sf(meuse.grid, coords = c("x", "y"),
 ```
 
 # Kriging
+
 ## Anisotropy testing
+
 
 ``` r
 # Compute directional variograms
@@ -116,6 +51,7 @@ plot(v_dir)
 <img src="{{< blogdown/postref >}}index_files/figure-html/unnamed-chunk-3-1.png" width="672" />
 
 ## Define anisotropic variogram model
+
 
 ``` r
 # Define anisotropic variogram model
@@ -138,6 +74,7 @@ plot(v, anisotropic_fitted, cutoff = 1500, cex = 1.5)
 <img src="{{< blogdown/postref >}}index_files/figure-html/unnamed-chunk-4-2.png" width="672" />
 
 ## kriging
+
 
 ``` r
 k <- gstat(formula = log(zinc) ~ 1, data = meuse, model = anisotropic_model)
@@ -253,4 +190,3 @@ pie(
 ```
 
 <img src="{{< blogdown/postref >}}index_files/figure-html/unnamed-chunk-12-1.png" width="672" />
-

@@ -3,8 +3,9 @@ title: Map view
 author: Wilfried Dossou-Yovo
 date: '2024-12-07'
 slug: map-view
-categories: []
+categories: ["Spatial Analysis"]
 tags: []
+#image: "image/logo.jpeg"
 ---
 
 <link href="{{< blogdown/postref >}}index_files/htmltools-fill/fill.css" rel="stylesheet" />

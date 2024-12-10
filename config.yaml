@@ -1,6 +1,6 @@
 baseurl: /
 languageCode: en-US
-title: A Hugo website
+title: A Wilfried's website
 theme: hugo-lithium
 ignoreFiles:
   - \.Rmd$
@@ -12,10 +12,10 @@ menu:
   main:
     - name: About
       url: /about/
-    - name: GitHub
-      url: https://github.com/rstudio/blogdown
-    - name: Twitter
-      url: https://twitter.com/rstudio
+  #  - name: GitHub
+  #    url: https://github.com/rstudio/blogdown
+    - name: LinkedIn
+      url: https://www.linkedin.com/in/wilfried-dossou-yovo-15231312b/
 params:
   MathJaxCDN: //cdnjs.cloudflare.com/ajax/libs
   MathJaxVersion: 2.7.5
@@ -28,9 +28,9 @@ params:
   highlightjsTheme: github
   highlightjsVersion: 9.12.0
   logo:
-    alt: Logo
+    alt: Blog
     height: 50
-    url: logo.png
+  #  url: image/logo.png
     width: 50
 markup:
   defaultMarkdownHandler: goldmark

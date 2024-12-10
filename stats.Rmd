@@ -36,11 +36,6 @@ print(example_files)
 
 # Read a specific shapefile (e.g., 'nc.shp')
 d <- st_read(system.file("shape/nc.shp", package = "sf"), quiet = TRUE)
-
-# Explore the structure and content of the data
-summary(d)
-str(d)
-head(d)
 ```
 
 ```{r}
